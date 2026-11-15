@@ -12,8 +12,6 @@ Cada carpeta conserva el contenido original de su etapa, sin `.git`, dependencia
 instaladas ni binarios pesados. La documentación de operación y de código está en
 [`docs/`](docs/), y el sitio del proyecto en [`docs/index.html`](docs/index.html).
 
-> **Nota de preservación:** se removieron credenciales, claves o tokens detectados en 1 archivo(s) de esta familia. Los ejemplos y plantillas seguras se conservan.
-
 ## Índice de versiones
 
 | Versión | Qué aporta | Archivos |
@@ -35,6 +33,64 @@ docker compose up -d
 
 Requiere un coordinador Zigbee y válvulas emparejadas. La base de datos y las credenciales locales no se incluyen.
 
+<!-- ficha -->
+## Ficha de evaluación
+
+**Madurez global: 3.8/5**
+
+| Criterio | Nota | Evidencia |
+|---|---:|---|
+| Madurez | 4/5 | Opera dos válvulas y un interruptor reales, con auditoría en dos ciclos; sin planificador ni tests automatizados. |
+| Reproducibilidad | 3/5 | Requiere dongle Sonoff, Zigbee2MQTT 2.13, Docker y los dispositivos emparejados; el compose es corto. |
+| Documentación | 4/5 | README, BITACORA con once problemas, datasheet y developer cubren instalación, comandos y límites. |
+| Honestidad de límites | 5/5 | Declara MQTT sin autenticación, frontend expuesto en LAN, ausencia de planificador y verificación manual. |
+| Valor demostrativo | 4/5 | Demuestra control local de riego con Zigbee estándar y migración a Raspberry Pi documentada. |
+| Facilidad de despliegue | 3/5 | Docker simplifica el stack, pero el emparejamiento Zigbee y el dongle por by-id exigen atención. |
+
+Herramienta local de riego madura para su alcance, con límites declarados; le falta un planificador de riego propio y pruebas automatizadas para un uso desatendido prolongado.
+
+## Lo que no funcionó
+
+### valvulas-zigbee — El converter esperaba OPEN y la válvula usa ON
+
+La especificación inicial enviaba state OPEN y CLOSE, pero el SWV-NH se expone con el cluster OnOff. Los primeros comandos no cambiaban nada y no devolvían error visible. Se corrigió el mapeo a ON/OFF y se documentó el comportamiento del dispositivo.
+
+### valvulas-zigbee — Válvulas dormidas y timeouts intermitentes
+
+Los comandos funcionaban recién usados y fallaban tras un rato de inactividad: el SWV-NH es un end device a batería que duerme. Se lo despierta con un get y se descarta el estado viejo antes del set; la latencia bajó de intermitente a dos u ocho segundos.
+
+### valvulas-zigbee — permit_join sin campo time
+
+Publicar value true en bridge/request/permit_join a veces no abría la ventana y en otras la dejaba abierta indefinidamente. Zigbee2MQTT 2.x exige el campo time en segundos; la CLI lo incorporó, aunque interrumpir con Ctrl+C todavía puede dejar la ventana abierta.
+
+### valvulas-zigbee — --timeout ignorado por la CLI
+
+La auditoría del primer ciclo detectó que open valvula_riego --timeout 3 seguía esperando quince segundos. main() leía el argumento pero llamaba a cmd_set sin pasarlo, y la función tampoco lo aceptaba. Se propagó el parámetro hasta la espera de confirmación.
+
+## Preguntas típicas
+
+**¿Necesito Home Assistant?**
+
+No es obligatorio; el proyecto tiene backend propio.
+
+**¿Qué válvulas sirven?**
+
+Válvulas Zigbee compatibles con el coordinador usado.
+
+**¿Funciona sin Internet?**
+
+Sí, en red local.
+
+**¿Dónde están las credenciales?**
+
+Se removieron. Hay que configurarlas localmente.
+
+**¿Se puede migrar a otra placa?**
+
+La guía cubre Raspberry Pi; otra placa requiere revisar Docker y GPIO.
+
+<!-- /ficha -->
+
 ## Documentación
 
 - [`docs/datasheet.md`](docs/datasheet.md) — instalación, operación y límites.
@@ -42,9 +98,9 @@ Requiere un coordinador Zigbee y válvulas emparejadas. La base de datos y las c
 - [`docs/REFERENCES.md`](docs/REFERENCES.md) — estándares, librerías y fuentes.
 - [`docs/index.html`](docs/index.html) — página del proyecto (GitHub Pages).
 
-## Alcance y honestidad
+## El proyecto en detalle
 
-## valvulas-zigbee
+### valvulas-zigbee
 
 **Riego por válvulas Zigbee, controlado desde tu propia red. Sin nube, sin app, sin cuenta.**
 
